@@ -1,0 +1,67 @@
+version: '3.7'
+
+services:
+  mysql:
+    image: mysql:5.7
+    # コンテナ名を明示的に指定する
+    container_name: headless-db-container
+    # ホスト名を明示的に指定する
+    hostname: db-server
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: laravel_db
+      MYSQL_USER: laravel_user
+      MYSQL_PASSWORD: laravel_pass
+      TZ: 'Asia/Tokyo'
+
+    # 起動時のコマンド
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci
+    # ディレクトリ同期。設定ファイルとMySQLのデータが保存される場所を同期している。コンテナは基本的に起動時に変更されてもコンテナ自体が止まるとデータが消えてしまうため、保存しておきたいものはホストマシンと同期しておく必要がある。
+    volumes:
+      - ./db/data:/var/lib/mysql
+      - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - 3306:3306
+
+
+# ----------------------------------
+# phpMyAdminを動かすコンテナ
+# ----------------------------------
+  phpmyadmin:
+    # コンテナ名を明示的に指定する
+    container_name: headless-phpmyadmin-container
+    # ホスト名を明示的に指定する
+    hostname: phpmyadmin-server
+    depends_on:
+      - mysql
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mysql
+    ports:
+      - "8080:80"
+
+  php-apache:
+    # コンテナ名を明示的に指定する
+    container_name: headless-web-container
+    # ホスト名を明示的に指定する
+    hostname: web-server
+    build: ./
+    volumes:
+      - ./home:/home/
+    ports:
+      - "80:80"
+    depends_on:
+      - mysql
+
+  # ----------------------------------
+  # MailCatcherを動かすコンテナ
+  # ----------------------------------
+  mailcatcher:
+    container_name: headless-mailcatcher-container
+    image: schickling/mailcatcher
+    ports:
+      - 1080:1080
+
+
+volumes:
+    db_data: {}
